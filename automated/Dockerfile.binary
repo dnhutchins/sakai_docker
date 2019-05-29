@@ -23,7 +23,7 @@ RUN rm -fr /sakaibin
 
 RUN mkdir -p /usr/local/sakai/properties
 
-ENV CATALINA_OPTS_MEMORY -Xms20000m -Xmx20000m
+ENV CATALINA_OPTS_MEMORY -Xms2000m -Xmx2000m
 ENV CATALINA_OPTS \
 -server \
 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseConcMarkSweepGC -XX:+UseParNewGC \
@@ -41,7 +41,11 @@ ENV CATALINA_OPTS \
 -Dhttp.agent=Sakai \
 -Djava.util.Arrays.useLegacyMergeSort=true 
 
-RUN sed -i.orig '/^common.loader=/s@$@,"${catalina.base}/sakai-lib/*.jar"@' /usr/local/tomcat/conf/catalina.properties
+RUN sed -i '/^common.loader\=/ s/$/,"${catalina.base}\/sakai-lib\/*.jar"/' /usr/local/tomcat/conf/catalina.properties
 
 RUN curl -L -o /usr/local/tomcat/lib/mysql-connector-java-5.1.47.jar https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar
 
+RUN mkdir -p /usr/local/tomcat/sakai
+COPY lib/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
