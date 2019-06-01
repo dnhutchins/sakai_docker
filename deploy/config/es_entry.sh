@@ -9,5 +9,9 @@ echo "Using interface $ES_INT for elasticsearch"
 # Create the updated Sakai configuration
 cat /usr/local/sakai/es.properties | sed s/#interface#/\_$ES_INT:ipv4\_/g > /usr/local/sakai/properties/sakai.properties
 
+rm -fr /usr/local/tomcat/webapps/ROOT/*
+cd /usr/local/tomcat/webapps/ROOT
+tar zxvf /demopage.tgz
+
 # Execute the real entrypoint script
 /entrypoint.sh
