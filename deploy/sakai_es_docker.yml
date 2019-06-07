@@ -7,10 +7,10 @@ services:
   sakai:
     # LOCAL image, fine for a single machine, but for a cluster
     # you should use a repo (e.g. mydockerhubrepo/sakai:19.1)      
-    image: sakai
+    image: dnhutchins/sakai:demo
     # Explicitly set any environment variables, in this case Tomcat memory
     environment:
-      - "CATALINA_OPTS_MEMORY=-Xms4000m -Xmx4000m"
+      - "CATALINA_OPTS_MEMORY=-Xms8000m -Xmx8000m"
       - "SERVICE_PORTS=8080"
       - "VIRTUAL_HOST=*"
       - "HTTP_CHECK=GET /direct/server-config/servers.json \"HTTP/1.1\\r\\nHost: ingress.proxy\""

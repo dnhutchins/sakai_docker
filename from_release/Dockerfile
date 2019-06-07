@@ -4,24 +4,9 @@ ARG release=19.1
 
 COPY lib/server.xml /usr/local/tomcat/conf/server.xml
 COPY lib/context.xml /usr/local/tomcat/conf/context.xml
+COPY lib/entrypoint.sh /entrypoint.sh
 
-RUN mkdir /sakaibin
-WORKDIR /sakaibin
-ADD http://source.sakaiproject.org/release/${release}/artifacts/sakai-bin-${release}.tar.gz ./
-RUN tar -zxvf sakai-bin-${release}.tar.gz
-
-RUN rm -fr /usr/local/tomcat/components
-RUN rm -fr /usr/local/tomcat/sakai-lib
-RUN rm -fr /usr/local/tomcat/webapps
-
-RUN cp -R /sakaibin/components /usr/local/tomcat/components/
-RUN cp -R /sakaibin/lib /usr/local/tomcat/sakai-lib/
-RUN cp -R /sakaibin/webapps /usr/local/tomcat/webapps/
-
-WORKDIR /
-RUN rm -fr /sakaibin
-
-RUN mkdir -p /usr/local/sakai/properties
+RUN mkdir /sakaibin && cd /sakaibin && wget http://source.sakaiproject.org/release/${release}/artifacts/sakai-bin-${release}.tar.gz && tar -zxvf sakai-bin-${release}.tar.gz && rm -fr /usr/local/tomcat/components && rm -fr /usr/local/tomcat/sakai-lib && rm -fr /usr/local/tomcat/webapps && cp -R /sakaibin/components /usr/local/tomcat/components/ && cp -R /sakaibin/lib /usr/local/tomcat/sakai-lib/ && cp -R /sakaibin/webapps /usr/local/tomcat/webapps/ && cd / && rm -fr /sakaibin && mkdir -p /usr/local/sakai/properties && sed -i '/^common.loader\=/ s/$/,"${catalina.base}\/sakai-lib\/*.jar"/' /usr/local/tomcat/conf/catalina.properties && curl -L -o /usr/local/tomcat/lib/mysql-connector-java-5.1.47.jar https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar && mkdir -p /usr/local/tomcat/sakai && chmod +x /entrypoint.sh
 
 ENV CATALINA_OPTS_MEMORY -Xms2000m -Xmx2000m
 ENV CATALINA_OPTS \
@@ -41,11 +26,4 @@ ENV CATALINA_OPTS \
 -Dhttp.agent=Sakai \
 -Djava.util.Arrays.useLegacyMergeSort=true 
 
-RUN sed -i '/^common.loader\=/ s/$/,"${catalina.base}\/sakai-lib\/*.jar"/' /usr/local/tomcat/conf/catalina.properties
-
-RUN curl -L -o /usr/local/tomcat/lib/mysql-connector-java-5.1.47.jar https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar
-
-RUN mkdir -p /usr/local/tomcat/sakai
-COPY lib/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
