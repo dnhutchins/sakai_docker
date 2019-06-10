@@ -3,8 +3,9 @@ version: '3.6'
 
 # Services Section
 services:
-  # Sakai Service
+  #
   # HAProxy to handle everything.
+  # 
   stackproxy:
     image: dockercloud/haproxy:1.6.7
     environment:
@@ -24,12 +25,13 @@ services:
         gelf-address: "udp://127.0.0.1:12201"
         tag: "stackproxy-console"
 
+  # 
+  # Shell In A Box on a maven container.
+  #
   builder:
     image: wtee
-    configs:
-      - source: maven_config
-        target: /usr/share/maven/conf/settings.xml
     volumes:
+      - "$PWD/CONFIG/maven/settings.xml:/usr/share/maven/conf/settings.xml"
       - sakai_source:/source
       - sakai_deploy:/deploy
       - maven_cache:/root/.m2
@@ -48,7 +50,9 @@ services:
         gelf-address: "udp://127.0.0.1:12201"
         tag: "builder-console"
 
-  # MySQL service.      
+  # 
+  # MySQL service.
+  #
   mysql:
     # Docker official image for MySQL 5.5
     image: mysql:5.7.26
@@ -71,55 +75,66 @@ services:
         gelf-address: "udp://127.0.0.1:12201"
         tag: "mysql-console"
 
+  # 
+  # Sakai Service
+  #
   sakai:
     image: tomcat:9.0.20-jre8
     environment:
-      - "CATALINA_OPTS_MEMORY=-Xms8000m -Xmx8000m"
+      - "CATALINA_OPTS_MEMORY=-Xms4000m -Xmx4000m"
       - "CATALINA_OPTS=-server -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:+CMSParallelRemarkEnabled -XX:+UseCompressedOops -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=80 -XX:TargetSurvivorRatio=90 -Djava.awt.headless=true -Dsun.net.inetaddr.ttl=0 -Dsakai.component.shutdownonerror=true -Duser.language=en -Duser.country=US -Dsakai.home=/usr/local/sakai/properties -Dsakai.security=/usr/local/tomcat/sakai -Duser.timezone=US/Eastern -Dsun.net.client.defaultConnectTimeout=300000 -Dsun.net.client.defaultReadTimeout=1800000 -Dorg.apache.jasper.compiler.Parser.STRICT_QUOTE_ESCAPING=false -Dsun.lang.ClassLoader.allowArraySyntax=true -Dhttp.agent=Sakai -Djava.util.Arrays.useLegacyMergeSort=true"
       - "SERVICE_PORTS=8080"
       - "VIRTUAL_HOST=*"
       - "HTTP_CHECK=GET / \"HTTP/1.1\\r\\nHost: ingress.proxy\""
-    configs:
-      - source: sakai_config
-        target: /usr/local/sakai/es.properties
-    # The overlay networks to connect this service to. These are defined in the Networks 
-    # section near the bottom of this file
     networks:
-      - sakaielastic
-      - graylog
-      - mysql
-      - mail
-      - proxy
-    # The secrets to provide to this service. These are defined in the Secrets section
-    # near the bottom of this file.
+      sakaielastic:
+        aliases:
+          - sakaielastic
+      graylog:
+        aliases:
+          - sakai
+      mysql:
+      mail:
+      proxy:
     volumes:
       - "$PWD/lib/mysql-connector-java-5.1.47.jar:/usr/local/tomcat/lib/mysql-connector-java-5.1.47.jar"
       - "$PWD/lib/tomcat_entry.sh:/tomcat_entry.sh"
       - "$PWD/CONFIG/tomcat/server.xml:/usr/local/tomcat/conf/server.xml"
       - "$PWD/CONFIG/tomcat/context.xml:/usr/local/tomcat/conf/context.xml"
+      - "$PWD/CONFIG/sakai/sakai.properties:/usr/local/sakai/es.properties"
       - "sakai_deploy_components:/usr/local/tomcat/components"
       - "sakai_deploy_lib:/usr/local/tomcat/sakai-lib"
       - "sakai_deploy_webapps:/usr/local/tomcat/webapps"
       - "sakai_root:/usr/local/tomcat/webapps/ROOT"
+      - "sakai_elastic:/search"
       - "$PWD/lib/json-simple-1.1.1.jar:/usr/local/tomcat/sakai-lib/json-simple-1.1.1.jar"
       - "$PWD/lib/logstash-gelf-1.10.0.jar:/usr/local/tomcat/sakai-lib/logstash-gelf-1.10.0.jar"
       - "$PWD/CONFIG/sakai/log4j.properties:/usr/local/sakai/properties/log4j.properties"
     entrypoint: bash /tomcat_entry.sh
-    #    logging:
-    #  driver: "gelf"
-    #  options:
-    #    gelf-address: "udp://127.0.0.1:12201"
-    #    tag: "sakai-console"
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "sakai-console"
 
+  # 
+  # Mongo Service (for graylog)
+  #
   mongo:
     image: mongo:3
     networks:
       - mongo
+    volumes:
+      - "mongo_data:/data/db"
     logging:
       driver: "gelf"
       options:
         gelf-address: "udp://127.0.0.1:12201"
         tag: "mongo-console"
+
+  #
+  # Elasticsearch 6 service (for graylog)
+  #
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.6.1
     environment:
@@ -129,11 +144,17 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     networks:
       - elastic
+    volumes:
+      - "elastic_gl_data:/usr/share/elasticsearch/data"
     logging:
       driver: "gelf"
       options:
         gelf-address: "udp://127.0.0.1:12201"
         tag: "elasticsearch-console"
+
+  #
+  # Graylog Service
+  #
   graylog:
     image: graylog/graylog:3.0
     environment:
@@ -160,35 +181,17 @@ services:
       - mongo
       - elasticsearch
     ports:
-      # Syslog TCP
-      - 1514:1514
-      # Syslog UDP
-      - 1514:1514/udp
-      # GELF TCP
-      - 12201:12201
       # GELF UDP
       - 12201:12201/udp
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "graylog-console"
 
-
-  # Elasticsearch Service     
-  sakaielastic:
-    # Docker official Elasticsearch 1.7.6 image      
-    image: elasticsearch:1.7.6
-    # Environment variables
-    environment:
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    # Configs from section near bottom
-    configs:
-      - source: elastic_config
-        target: /usr/share/elasticsearch/config/elasticsearch.yml
-    # Networks from section near bottom
-    networks:
-      - sakaielastic
-    # Using DNS Round Robin, to make the overlay netowrk the primary
-    deploy:
-      endpoint_mode: dnsrr
-
+  # 
   # Cerebro service    
+  #
   cerebro:
     # 3rd party repo for Cerebro (Elasticsearch management)      
     image: lmenezes/cerebro
@@ -197,13 +200,19 @@ services:
       - "VIRTUAL_HOST=/elastic/*"
       - "SERVICE_PORTS=9000"
       - "EXTRA_SETTINGS=reqrep ^([^\\ :]*)\\ /elastic/(.*) \\1\\ /\\2"
-    # Networks from section near bottom
     networks:
       - elastic
       - sakaielastic
       - proxy
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "cerebro-console"
 
+  # 
   # Mailcatcher service      
+  #
   mailcatcher:
     # 3rd party repo fro Mailcatcher (Fake mail server for development and testing)
     image: tophfr/mailcatcher:0.7.1
@@ -216,7 +225,14 @@ services:
     networks:
       - mail
       - proxy
-
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "mailcatcher-console"
+  #
+  # Kibana Service (Sakai Search)
+  #
   kibana:
     image: kibana:4.1.11
     networks:
@@ -229,7 +245,15 @@ services:
       - "EXTRA_SETTINGS=reqrep ^([^\\ :]*)\\ /kibana/(.*) \\1\\ /\\2"
       - "SERVER_NAME=127.0.0.1"
       - "ELASTICSEARCH_URL=http://sakaielastic:9200"
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "kibana-console"
 
+  #
+  # PHPMyAdmin Service
+  #
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:4.7
     environment:
@@ -242,36 +266,13 @@ services:
     networks:
       - mysql
       - proxy
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "phpmyadmin-console"
     
-# Configuration files we want Docker to manage
-configs:
-  # The Sakai config using Mailcatcher as the outgoing SMTP
-  # and Elasticsearch configuration with a placeholder value
-  # to be replaced by the entrypoint script at runtime
-  maven_config:
-    file: ./CONFIG/maven/settings.xml
-  sakai_config:
-    file: ./CONFIG/sakai/sakai.properties
-  # The Elasticsearch config for elasticsearch service
-  elastic_config:
-    file: ./CONFIG/sakai/elastic/elasticsearch.yml
-#  # The entrypoint script being used to override the defaut in the sakai service
-#  elastic_entry:
-#    file: ./config/es_entry.sh
-#  demopage:
-#    file: ./config/demopage.tgz
-
-# Secrets files we want docker to manage
-#secrets:
-#  # Example security properties for the sakai servicer
-#  security.properties:
-#    file: ./secrets/security.properties
-
-# Networks to be created, connected to services above
 networks:
-  # The elasticsearch overlay network, with a manually defined subnet
-  # so that the entrypoint script in the sakai service can easily
-  # identify the correct interface when configuring sakai search
   sakaielastic:
     driver: overlay
     ipam:
@@ -279,19 +280,14 @@ networks:
         - subnet: 10.99.99.0/24
   elastic:
     driver: overlay
-  # MySQL overlay netowrk
   mysql:
     driver: overlay
-  # Mail overlay netowrk
   mail:
     driver: overlay
-  # Proxy overlay network
   proxy:
     driver: overlay
-  # MongoDB overlay network
   mongo:
     driver: overlay
-  # Graylog overlay network
   graylog:
     driver: overlay
 
@@ -341,4 +337,18 @@ volumes:
       type: none
       device: $PWD/CONFIG/sakai
       o: bind
-
+  mongo_data:
+    driver_opts:
+      type: none
+      device: $PWD/DATA/mongo
+      o: bind
+  elastic_gl_data:
+    driver_opts:
+      type: none
+      device: $PWD/DATA/elastic/graylog
+      o: bind
+  sakai_elastic:
+    driver_opts:
+      type: none
+      device: $PWD/DATA/elastic/sakai
+      o: bind
