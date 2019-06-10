@@ -1,0 +1,3 @@
+[submodule "dev/sakai/source/sakai"]
+	path = dev/sakai/source
+	url = https://github.com/sakaiproject/sakai.git
