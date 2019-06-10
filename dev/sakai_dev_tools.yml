@@ -73,6 +73,7 @@ services:
       - "HTTP_CHECK=GET / \"HTTP/1.1\\r\\nHost: ingress.proxy\""
     networks:
       mysql:
+      mail:
       proxy:
     volumes:
       - "$PWD/lib/mysql-connector-java-5.1.47.jar:/usr/local/tomcat/lib/mysql-connector-java-5.1.47.jar"
@@ -84,11 +85,45 @@ services:
       - "sakai_deploy_lib:/usr/local/tomcat/sakai-lib"
       - "sakai_deploy_webapps:/usr/local/tomcat/webapps"
       - "sakai_root:/usr/local/tomcat/webapps/ROOT"
-      - "$PWD/DATA/ROOT/index_dev_min.html:/usr/local/tomcat/webapps/ROOT/index.html"
+      - "$PWD/DATA/ROOT/index_dev_tools.html:/usr/local/tomcat/webapps/ROOT/index.html"
     entrypoint: bash /tomcat_entry.sh
 
+  # 
+  # Mailcatcher service      
+  #
+  mailcatcher:
+    # 3rd party repo fro Mailcatcher (Fake mail server for development and testing)
+    image: tophfr/mailcatcher:0.7.1
+    environment:
+      - "VIRTUAL_HOST_WEIGHT=5"
+      - "VIRTUAL_HOST=/mail/*"
+      - "SERVICE_PORTS=1080"
+    command: "mailcatcher --no-quit --foreground --ip=0.0.0.0 --http-path=/mail"
+    # Networks from section near bottom
+    networks:
+      - mail
+      - proxy
+
+  #
+  # PHPMyAdmin Service
+  #
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:4.7
+    environment:
+      - "PMA_ARBITRARY=1"
+      - "PMA_ABSOLUTE_URI=http://127.0.0.1/pma/"
+      - "VIRTUAL_HOST_WEIGHT=5"
+      - "VIRTUAL_HOST=/pma/*"
+      - "SERVICE_PORTS=80"
+      - "EXTRA_SETTINGS=reqrep ^([^\\ :]*)\\ /pma/(.*) \\1\\ /\\2"
+    networks:
+      - mysql
+      - proxy
+    
 networks:
   mysql:
+    driver: overlay
+  mail:
     driver: overlay
   proxy:
     driver: overlay
