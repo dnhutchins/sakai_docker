@@ -24,18 +24,16 @@ services:
   # Shell In A Box on a maven container.
   #
   builder:
-    image: wtee
+    image: maven:3.6.1-jdk-8
     volumes:
+      - "$PWD/lib/maven_entry.sh:/maven_entry.sh"
+      - "$PWD/CONFIG/maven/zshrc:/root/.zshrc"
       - "$PWD/CONFIG/maven/settings.xml:/usr/share/maven/conf/settings.xml"
       - "$PWD/CONFIG/maven/black_on_white.css:/black_on_white.css"
       - sakai_source:/source
       - sakai_deploy:/deploy
       - maven_cache:/root/.m2
-    command:
-      - shellinaboxd 
-      - --disable-ssl
-      - --css
-      - /black_on_white.css
+    entrypoint: bash /maven_entry.sh
     environment:
       - "SERVICE_PORTS=4200"
       - "VIRTUAL_HOST_WEIGHT=5"

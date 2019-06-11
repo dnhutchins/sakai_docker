@@ -8,3 +8,9 @@ export JAVA_BASE_URL=https://github.com/AdoptOpenJDK/openjdk8-upstream-binaries/
 export SHLVL=1
 export JAVA_URL_VERSION=8u212b04
 
+export ZSH="/root/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+plugins=(git)
+source $ZSH/oh-my-zsh.sh
+
+cd /source
