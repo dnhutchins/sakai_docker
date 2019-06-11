@@ -2,6 +2,8 @@
 
 sed -i '/^common.loader\=/ s/$/,"${catalina.base}\/sakai-lib\/*.jar"/' /usr/local/tomcat/conf/catalina.properties
 
+mkdir -p /usr/local/sakai/properties
+
 # Find the correct interface for elasticsearch using the subnet defined in the compose file
 ES_INT=$(ip addr | grep 10.99.99 | cut -d " " -f 11)
 

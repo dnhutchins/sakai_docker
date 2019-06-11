@@ -2,6 +2,8 @@
 
 sed -i '/^common.loader\=/ s/$/,"${catalina.base}\/sakai-lib\/*.jar"/' /usr/local/tomcat/conf/catalina.properties
 
+mkdir /usr/local/sakai/properties
+
 echo "waiting for graylog container"
 while ! ping -c 1 -n -w 1 graylog &> /dev/null
 do
