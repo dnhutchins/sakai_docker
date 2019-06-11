@@ -27,12 +27,15 @@ services:
     image: wtee
     volumes:
       - "$PWD/CONFIG/maven/settings.xml:/usr/share/maven/conf/settings.xml"
+      - "$PWD/CONFIG/maven/black_on_white.css:/black_on_white.css"
       - sakai_source:/source
       - sakai_deploy:/deploy
       - maven_cache:/root/.m2
     command:
       - shellinaboxd 
       - --disable-ssl
+      - --css
+      - /black_on_white.css
     environment:
       - "SERVICE_PORTS=4200"
       - "VIRTUAL_HOST_WEIGHT=5"
