@@ -67,7 +67,7 @@ The fourth stage adds full log aggregation via Graylog, and configures everythin
 ![Maven+Sakai+Mailcatcher+PhpMyAdmin+Cerebro+Kibana+Graylog](DATA/ROOT/images/stack_full.png?raw=true "Services")
 
  1. Update the running stack using the stage 2 compose file `docker stack deploy -c sakai_dev_full.yml SakaiStudio`
- 1. Wait for startup, you can monitor eith Graylog at http://127.0.0.1:8080/graylog/
+ 1. Wait for startup, you can monitor with Graylog at http://127.0.0.1:8080/graylog/
  1. After startup connect to http://127.0.0.1:8080 to see the list of services
 
 
